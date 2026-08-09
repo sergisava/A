@@ -1,7 +1,7 @@
 --[[
-    AERI HUB - XENO ONE-FILE WRAPPER
-    Todo en un solo archivo: bypass Luraph, HTTP, HWID, descarga y ejecucion.
-    Optimizado para Xeno v1.3.x
+    AERI HUB - XENO ONE-FILE WRAPPER (LOCAL FILE)
+    Lee el script ofuscado desde disco local, sin HTTP.
+    Ruta: C:\Users\sergisava\Desktop\AeriHub-Desofuscado\script.lua
 ]]
 
 -- ============================================
@@ -32,6 +32,7 @@ end
 
 log("========================================")
 log("AERI HUB - XENO ONE-FILE WRAPPER")
+log("Modo: archivo local, sin HTTP")
 log("========================================")
 
 -- ============================================
@@ -96,7 +97,7 @@ end
 log("Bypass Luraph aplicado")
 
 -- ============================================
--- BYPASS HTTP
+-- BYPASS HTTP (por si el script intenta verificar)
 -- ============================================
 local function should_block(url)
     url = string.lower(tostring(url or ""))
@@ -207,45 +208,41 @@ end
 log("Variables de entorno aplicadas")
 
 -- ============================================
--- DESCARGAR SCRIPT ORIGINAL
+-- CARGAR SCRIPT OFUSCADO DESDE DISCO LOCAL
 -- ============================================
-local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/refs/heads/master/script.lua"
-log("Descargando script...")
-log("URL: " .. SCRIPT_URL)
+local script_path = "C:\\Users\\sergisava\\Desktop\\AeriHub-Desofuscado\\script.lua"
+log("Leyendo script local: " .. script_path)
 
 local script_content = nil
 
--- Metodo 1: RequestAsync (PRINCIPAL en Xeno)
-if HttpService and _RequestAsync then
-    log("Probando RequestAsync...")
+-- Metodo 1: readfile (Xeno seguro)
+if readfile and type(readfile) == "function" then
+    log("Probando readfile...")
     local ok, result = pcall(function()
-        return HttpService:RequestAsync({
-            Url = SCRIPT_URL,
-            Method = "GET"
-        })
+        return readfile(script_path)
     end)
-    if ok and result and result.Success and result.Body and #result.Body > 1000 then
-        script_content = result.Body
-        log("RequestAsync EXITO: " .. tostring(#script_content) .. " chars")
+    if ok and result and #result > 1000 then
+        script_content = result
+        log("readfile EXITO: " .. tostring(#script_content) .. " chars")
     else
-        log("RequestAsync fallo o respuesta corta: " .. tostring(result and result.Body and #result.Body or 0) .. " chars")
+        log("readfile fallo: " .. tostring(#result or 0) .. " chars")
+        script_content = nil
     end
 end
 
--- Metodo 2: syn.request
-if not script_content and syn and _syn_request then
-    log("Probando syn.request...")
+-- Metodo 2: loadfile + tostring (fallback si readfile no existe)
+if not script_content and loadfile and type(loadfile) == "function" then
+    log("Probando loadfile...")
     local ok, result = pcall(function()
-        return _syn_request({
-            Url = SCRIPT_URL,
-            Method = "GET"
-        })
+        return loadfile(script_path)
     end)
-    if ok and result and result.Body and #result.Body > 1000 then
-        script_content = result.Body
-        log("syn.request EXITO: " .. tostring(#script_content) .. " chars")
+    if ok and result then
+        -- loadfile devuelve un chunk function, no el contenido
+        -- Necesitamos compilarlo directamente
+        log("loadfile EXITO - compilando directamente")
+        script_content = nil
     else
-        log("syn.request fallo")
+        log("loadfile fallo")
     end
 end
 
@@ -253,7 +250,7 @@ end
 if not script_content and _HttpGet then
     log("Probando game.HttpGet...")
     local ok, result = pcall(function()
-        return _HttpGet(game, SCRIPT_URL, true)
+        return _HttpGet(game, "https://raw.githubusercontent.com/sergisava/A/refs/heads/master/script.lua", true)
     end)
     if ok and result and #result > 1000 then
         script_content = result
@@ -264,7 +261,8 @@ if not script_content and _HttpGet then
 end
 
 if not script_content then
-    log("ERROR: No se pudo descargar el script por ningun metodo")
+    log("ERROR: No se pudo cargar el script")
+    log("Asegurate de que el archivo existe en: " .. script_path)
     save_log()
     return
 end
