@@ -14,23 +14,28 @@ local function diag(msg)
     pcall(function() warn("[AERI DIAG]", line) end)
 end
 
-local function save_diag()
-    local paths_to_try = {
-        "AeriHub_Diagnostico.txt",
-        "AeriHub_Diagnostico.txt",
-        "AeriHub_Diagnostico.txt",
-        "AeriHub_Diagnostico.txt",
+local function get_xeno_paths()
+    local userprofile = os.getenv("USERPROFILE") or "C:\\Users\\sergisava"
+    local localappdata = os.getenv("LOCALAPPDATA") or userprofile .. "\\AppData\\Local"
+    local desktop = userprofile .. "\\Desktop"
+    
+    return {
+        desktop .. "\\AeriHub_Diagnostico.txt",
+        localappdata .. "\\Xeno\\AeriHub_Diagnostico.txt",
+        localappdata .. "\\Xeno\\scripts\\AeriHub_Diagnostico.txt",
+        localappdata .. "\\Xeno\\workspace\\AeriHub_Diagnostico.txt",
+        localappdata .. "\\Xeno\\SavedScripts\\AeriHub_Diagnostico.txt",
     }
-    
-    local full_paths = {}
-    for i = 1, #paths_to_try do
-        full_paths[i] = paths_to_try[i]
-    end
-    
+end
+
+local function save_diag()
+    local paths = get_xeno_paths()
     local saved = false
-    for i = 1, #full_paths do
-        local path = full_paths[i]
-        diag("Intentando guardar en: " .. path)
+    local saved_path = nil
+    
+    for i = 1, #paths do
+        local path = paths[i]
+        diag("Probando guardar en: " .. path)
         local content = ""
         for j = 1, #log_lines do
             if j > 1 then content = content .. "\n" end
@@ -44,6 +49,7 @@ local function save_diag()
         if ok then
             diag("EXITO: Log guardado en: " .. path)
             saved = true
+            saved_path = path
             break
         else
             diag("FALLO en " .. path .. ": " .. tostring(err))
@@ -53,6 +59,8 @@ local function save_diag()
     if not saved then
         diag("ERROR: No se pudo guardar el log en ninguna ruta")
     end
+    
+    return saved_path
 end
 
 diag("========================================")
