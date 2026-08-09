@@ -1,7 +1,7 @@
 --[[
-    AERI HUB - DIAGNOSTICO XENO
+    AERI HUB - DIAGNOSTICO XENO (AUTO-PATH)
+    Detecta automaticamente la carpeta de Xeno.
     Solo diagnostica. NO carga el script ofuscado.
-    Usalo primero para ver donde se rompe.
 ]]
 
 -- Logging basico sin dependencias
@@ -15,20 +15,44 @@ local function diag(msg)
 end
 
 local function save_diag()
-    local path = "C:\\Users\\sergisava\\AppData\\Local\\Xeno\\AeriHub_Diagnostico.txt"
-    local content = ""
-    for i = 1, #log_lines do
-        if i > 1 then content = content .. "\n" end
-        content = content .. log_lines[i]
+    local paths_to_try = {
+        "AeriHub_Diagnostico.txt",
+        "AeriHub_Diagnostico.txt",
+        "AeriHub_Diagnostico.txt",
+        "AeriHub_Diagnostico.txt",
+    }
+    
+    local full_paths = {}
+    for i = 1, #paths_to_try do
+        full_paths[i] = paths_to_try[i]
     end
-    pcall(function()
-        if writefile then
-            writefile(path, content)
-            diag("Diagnostico guardado en: " .. path)
-        else
-            diag("writefile NO disponible")
+    
+    local saved = false
+    for i = 1, #full_paths do
+        local path = full_paths[i]
+        diag("Intentando guardar en: " .. path)
+        local content = ""
+        for j = 1, #log_lines do
+            if j > 1 then content = content .. "\n" end
+            content = content .. log_lines[j]
         end
-    end)
+        local ok, err = pcall(function()
+            if writefile then
+                writefile(path, content)
+            end
+        end)
+        if ok then
+            diag("EXITO: Log guardado en: " .. path)
+            saved = true
+            break
+        else
+            diag("FALLO en " .. path .. ": " .. tostring(err))
+        end
+    end
+    
+    if not saved then
+        diag("ERROR: No se pudo guardar el log en ninguna ruta")
+    end
 end
 
 diag("========================================")
