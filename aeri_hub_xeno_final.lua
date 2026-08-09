@@ -1,13 +1,7 @@
---[[
-    AERI HUB - XENO ONE-FILE WRAPPER FINAL
-    Usa RequestAsync como metodo principal (disponible en Xeno).
-    Intercepta HTTP, servicios Roblox y variables de entorno.
-    Descarga el script desde GitHub y lo ejecuta con bypasses.
-]]
+-- AERI HUB - XENO FINAL
+-- Cargar ESTE script primero en Xeno
 
--- ============================================
 -- LOGGING
--- ============================================
 local AERI_LOG = {}
 _G.AERI_LOG = AERI_LOG
 
@@ -19,11 +13,7 @@ end
 
 local function save_log()
     local path = "AeriHub_Xeno_Log.txt"
-    local content = ""
-    for i = 1, #AERI_LOG do
-        if i > 1 then content = content .. "\n" end
-        content = content .. AERI_LOG[i]
-    end
+    local content = table.concat(AERI_LOG, "\n")
     pcall(function()
         if writefile then
             writefile(path, content)
@@ -33,12 +23,10 @@ local function save_log()
 end
 
 log("========================================")
-log("AERI HUB - XENO ONE-FILE WRAPPER FINAL")
+log("AERI HUB - XENO FINAL")
 log("========================================")
 
--- ============================================
 -- DETECTAR XENO
--- ============================================
 local xeno_version = "Unknown"
 if identifyexecutor and type(identifyexecutor) == "function" then
     local ok, name, version = pcall(identifyexecutor)
@@ -48,9 +36,7 @@ if identifyexecutor and type(identifyexecutor) == "function" then
 end
 log("Executor: " .. xeno_version)
 
--- ============================================
 -- GUARDAR REFERENCIAS
--- ============================================
 local _pcall = pcall
 local _loadstring = loadstring
 local _tostring = tostring
@@ -59,9 +45,7 @@ local HttpService = pcall(function() return game:GetService("HttpService") end) 
 local _RequestAsync = HttpService and HttpService.RequestAsync or nil
 local _syn_request = syn and syn.request or nil
 
--- ============================================
 -- BYPASS LURAPH v14.7
--- ============================================
 local function is_luraph_check(expr)
     expr = tostring(expr or "")
     return string.find(expr, "45700", 1, true) ~= nil
@@ -97,9 +81,7 @@ end
 
 log("Bypass Luraph aplicado")
 
--- ============================================
 -- BYPASS HTTP
--- ============================================
 local function should_block(url)
     url = string.lower(tostring(url or ""))
     local patterns = {
@@ -153,9 +135,7 @@ end
 
 log("Bypass HTTP aplicado")
 
--- ============================================
 -- BYPASS HWID
--- ============================================
 local function safe_service(name)
     local ok, svc = _pcall(function() return game:GetService(name) end)
     return ok and svc or nil
@@ -181,9 +161,7 @@ end
 
 log("Bypass HWID aplicado")
 
--- ============================================
 -- VARIABLES DE ENTORNO
--- ============================================
 if getgenv then
     getgenv().KeyVerified = true
     getgenv().LicenseKey = "BYPASSED"
@@ -208,18 +186,16 @@ end
 
 log("Variables de entorno aplicadas")
 
--- ============================================
--- DESCARGAR SCRIPT ORIGINAL (RequestAsync primero)
--- ============================================
+-- DESCARGAR SCRIPT ORIGINAL
 local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/refs/heads/master/script_original.lua"
 log("Descargando script...")
 log("URL: " .. SCRIPT_URL)
 
 local script_content = nil
 
--- Metodo 1: RequestAsync (PRINCIPAL en Xeno)
+-- Metodo 1: RequestAsync (PRINCIPAL)
 if HttpService and _RequestAsync then
-    log("Probando RequestAsync (metodo principal)...")
+    log("Probando RequestAsync...")
     local ok, result = _pcall(function()
         return _RequestAsync(HttpService, {Url = SCRIPT_URL, Method = "GET"})
     end)
@@ -227,7 +203,7 @@ if HttpService and _RequestAsync then
         script_content = result.Body
         log("RequestAsync EXITO: " .. tostring(#script_content) .. " chars")
     else
-        log("RequestAsync fallo o respuesta corta: " .. tostring(result and result.Body and #result.Body or 0) .. " chars")
+        log("RequestAsync fallo: " .. tostring(result and result.Body and #result.Body or 0) .. " chars")
         script_content = nil
     end
 end
@@ -256,19 +232,17 @@ if not script_content and _HttpGet then
         script_content = result
         log("game.HttpGet EXITO: " .. tostring(#script_content) .. " chars")
     else
-        log("game.HttpGet fallo o respuesta corta: " .. tostring(#result or 0) .. " chars")
+        log("game.HttpGet fallo: " .. tostring(#result or 0) .. " chars")
     end
 end
 
 if not script_content then
-    log("ERROR: No se pudo descargar el script por ningun metodo")
+    log("ERROR: No se pudo descargar el script")
     save_log()
     return
 end
 
--- ============================================
 -- PARCHE: KeylessUI = false -> true
--- ============================================
 if string.find(script_content, "Sakura%.Options%.KeylessUI%s*=%s*false", 1, true) then
     script_content = string.gsub(
         script_content,
@@ -280,9 +254,7 @@ else
     log("KeylessUI=false no encontrado")
 end
 
--- ============================================
 -- EJECUCION
--- ============================================
 log("Compilando y ejecutando...")
 
 local compile_success, compiled = _pcall(original_loadstring, script_content)
