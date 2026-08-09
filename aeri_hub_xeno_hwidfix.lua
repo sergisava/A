@@ -1,15 +1,3 @@
---[[
-    AERI HUB - XENO HWID FIX
-    Intercepta TODO antes de ejecutar el script:
-    - HTTP (game.HttpGet, RequestAsync)
-    - Servicios Roblox (RbxAnalyticsService, UserInputService, GuiService)
-    - Variables de entorno (_G, getgenv)
-    - Detecta executor (Xeno)
-]]
-
--- ============================================
--- PASO 1: Guardar referencias ORIGINALES
--- ============================================
 local _pcall = pcall
 local _loadstring = loadstring
 local _tostring = tostring
