@@ -16,7 +16,11 @@ local function log(msg)
     local timestamp = os.time()
     local entry = "[" .. tostring(timestamp) .. "] " .. tostring(msg)
     table.insert(AERI_LOG, entry)
-    warn("[AERI LOG]", entry)
+    if warn and type(warn) == "function" then
+        pcall(warn, "[AERI LOG]", entry)
+    elseif print and type(print) == "function" then
+        pcall(print, "[AERI LOG]", entry)
+    end
 end
 
 local function save_log()
