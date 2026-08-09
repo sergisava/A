@@ -1,6 +1,3 @@
--- Docs 
--- https://github.com/sarahsophiesee-bot/SakuraUI/blob/main/README.md
-
 local Sakura = loadstring(game:HttpGet("https://cdn.jnkie.com/SakuraUI.lua"))()
 
 Sakura.Appearance = {
