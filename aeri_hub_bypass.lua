@@ -1,7 +1,10 @@
 --[[
-    AERI HUB - HWID/KEY BYPASS WRAPPER
+    AERI HUB - BYPASS WRAPPER
     Cargar ESTE archivo por loadstring/URL primero.
-    El wrapper aplica los bypasses y luego carga el script ofuscado original SIN desofuscar.
+    Parchea el script original en caliente:
+      - KeylessUI = false -> true
+      - Bypass HWID/keys
+      - Bypass verificación interna Luraph v14.7
 ]]
 
 -- Guardar referencias ORIGINALES antes de tocar nada
@@ -107,12 +110,12 @@ if syn and _syn_request then
 end
 
 -- ============================================
--- BYPASS 3: Roblox services used for HWID/device
+-- BYPASS 3: HWID / Roblox device services
 -- ============================================
 
 local function safe_get_service(name)
-    local service = pcall(function() return game:GetService(name) end)
-    return service and game:GetService(name) or nil
+    local ok, service = _pcall(function() return game:GetService(name) end)
+    return ok and service or nil
 end
 
 local RbxAnalyticsService = safe_get_service("RbxAnalyticsService")
@@ -132,7 +135,7 @@ if UserInputService and UserInputService.GetPlatform then
 end
 
 local GuiService = safe_get_service("GuiService")
-if GuiService then
+if GuiService and GuiService.GetPlatform then
     local originalGetPlatform = GuiService.GetPlatform
     GuiService.GetPlatform = function()
         return Enum.Platform.Windows
@@ -165,15 +168,26 @@ if identifyexecutor then
     getgenv and getgenv().identifyexecutor = function() return "None", "1.0.0" end
 end
 
-warn("[AERI BYPASS] Bypasses aplicados. Cargando script ofuscado original...")
+warn("[AERI BYPASS] Bypasses aplicados. Cargando script original...")
 
 -- ============================================
--- CARGA DEL SCRIPT OFUSCADO ORIGINAL
+-- CARGA Y PARCHE DEL SCRIPT ORIGINAL
 -- ============================================
 
 local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/main/script_original.lua"
 
 local script_content = game:HttpGet(SCRIPT_URL)
+
+-- Parche en caliente: cambiar KeylessUI = false -> true
+script_content = string.gsub(
+    script_content,
+    "Sakura%.Options%.KeylessUI%s*=%s*false",
+    "Sakura.Options.KeylessUI = true"
+)
+
+warn("[AERI BYPASS] Script cargado y parcheado.")
+
+-- Ejecutar con loadstring usando la referencia original
 local success, result = _pcall(_loadstring, script_content)
 if success and result then
     result()
