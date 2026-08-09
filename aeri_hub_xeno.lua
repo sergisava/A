@@ -1,59 +1,54 @@
 --[[
-    AERI HUB - XENO FINAL WRAPPER
-    Xeno v1.3.x compatible
-    Usa RequestAsync como metodo principal porque game.HttpGet trunca respuestas grandes.
+    AERI HUB - XENO ONE-FILE WRAPPER
+    Todo en un solo archivo: bypass Luraph, HTTP, HWID, descarga y ejecucion.
+    Optimizado para Xeno v1.3.x
 ]]
 
 -- ============================================
--- LOGGING (Xeno safe)
+-- LOGGING
 -- ============================================
-local log_lines = {}
-_G.AERI_LOG = log_lines
+local AERI_LOG = {}
+_G.AERI_LOG = AERI_LOG
 
 local function log(msg)
     local line = "[" .. tostring(os.time()) .. "] " .. tostring(msg)
-    table.insert(log_lines, line)
+    table.insert(AERI_LOG, line)
     pcall(function() warn("[AERI]", line) end)
 end
 
 local function save_log()
     local path = "AeriHub_Xeno_Log.txt"
     local content = ""
-    for i = 1, #log_lines do
+    for i = 1, #AERI_LOG do
         if i > 1 then content = content .. "\n" end
-        content = content .. log_lines[i]
+        content = content .. AERI_LOG[i]
     end
     pcall(function()
         if writefile then
             writefile(path, content)
-            log("Log guardado: " .. path)
         end
     end)
 end
 
 log("========================================")
-log("AERI HUB - XENO FINAL WRAPPER")
+log("AERI HUB - XENO ONE-FILE WRAPPER")
 log("========================================")
 
 -- ============================================
 -- DETECTAR XENO
 -- ============================================
-log("Detectando executor...")
-
 local xeno_version = "Unknown"
 if identifyexecutor and type(identifyexecutor) == "function" then
     local ok, name, version = pcall(identifyexecutor)
     if ok then
         xeno_version = tostring(name or "Xeno") .. " " .. tostring(version or "")
-        log("Executor: " .. xeno_version)
     end
 end
+log("Executor: " .. xeno_version)
 
 -- ============================================
 -- GUARDAR REFERENCIAS
 -- ============================================
-log("Guardando referencias originales...")
-
 local _pcall = pcall
 local _loadstring = loadstring
 local _tostring = tostring
@@ -65,8 +60,6 @@ local _syn_request = syn and syn.request or nil
 -- ============================================
 -- BYPASS LURAPH v14.7
 -- ============================================
-log("Aplicando bypass Luraph...")
-
 local function is_luraph_check(expr)
     expr = tostring(expr or "")
     return string.find(expr, "45700", 1, true) ~= nil
@@ -77,6 +70,7 @@ end
 local original_loadstring = _loadstring
 loadstring = function(expr, env)
     if is_luraph_check(expr) then
+        log("BYPASS: loadstring Luraph interceptado")
         return function() end
     end
     return original_loadstring(expr, env)
@@ -85,6 +79,7 @@ end
 local original_pcall = _pcall
 pcall = function(f, ...)
     if f == original_loadstring or f == loadstring or (type(f) == "string" and is_luraph_check(f)) then
+        log("BYPASS: pcall Luraph interceptado")
         return true, function() end
     end
     return original_pcall(f, ...)
@@ -101,10 +96,8 @@ end
 log("Bypass Luraph aplicado")
 
 -- ============================================
--- BYPASS HTTP (XENO: RequestAsync primero)
+-- BYPASS HTTP
 -- ============================================
-log("Aplicando bypass HTTP...")
-
 local function should_block(url)
     url = string.lower(tostring(url or ""))
     local patterns = {
@@ -124,8 +117,6 @@ local function fake_response()
     return '{"status":"success","verified":true,"hwid":"BYPASSED","key":"BYPASSED"}'
 end
 
--- Xeno: No reemplazar game.HttpGet porque trunca respuestas grandes
--- Solo bloquear solicitudes de verificacion si se detectan
 if _HttpGet then
     game.HttpGet = function(self, url, ...)
         if should_block(url) then
@@ -136,7 +127,6 @@ if _HttpGet then
     end
 end
 
--- RequestAsync (metodo principal en Xeno)
 if HttpService and _RequestAsync then
     HttpService.RequestAsync = function(self, options)
         local url = tostring(options and options.Url or "")
@@ -148,7 +138,6 @@ if HttpService and _RequestAsync then
     end
 end
 
--- syn.request
 if syn and _syn_request then
     syn.request = function(options)
         local url = tostring(options and options.Url or "")
@@ -165,8 +154,6 @@ log("Bypass HTTP aplicado")
 -- ============================================
 -- BYPASS HWID
 -- ============================================
-log("Aplicando bypass HWID...")
-
 local function safe_service(name)
     local ok, svc = pcall(function() return game:GetService(name) end)
     return ok and svc or nil
@@ -195,8 +182,6 @@ log("Bypass HWID aplicado")
 -- ============================================
 -- VARIABLES DE ENTORNO
 -- ============================================
-log("Inyectando variables de entorno...")
-
 if getgenv then
     getgenv().KeyVerified = true
     getgenv().LicenseKey = "BYPASSED"
@@ -222,18 +207,17 @@ end
 log("Variables de entorno aplicadas")
 
 -- ============================================
--- DESCARGAR SCRIPT ORIGINAL (XENO: RequestAsync primero)
+-- DESCARGAR SCRIPT ORIGINAL
 -- ============================================
-log("Descargando script original...")
-
 local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/refs/heads/master/script.lua"
+log("Descargando script...")
 log("URL: " .. SCRIPT_URL)
 
 local script_content = nil
 
 -- Metodo 1: RequestAsync (PRINCIPAL en Xeno)
 if HttpService and _RequestAsync then
-    log("Intentando con RequestAsync (metodo principal Xeno)...")
+    log("Probando RequestAsync...")
     local ok, result = pcall(function()
         return HttpService:RequestAsync({
             Url = SCRIPT_URL,
@@ -244,14 +228,13 @@ if HttpService and _RequestAsync then
         script_content = result.Body
         log("RequestAsync EXITO: " .. tostring(#script_content) .. " chars")
     else
-        log("RequestAsync fallo o respuesta corta: " .. tostring(#result and result.Body or 0) .. " chars")
-        script_content = nil
+        log("RequestAsync fallo o respuesta corta: " .. tostring(result and result.Body and #result.Body or 0) .. " chars")
     end
 end
 
 -- Metodo 2: syn.request
 if not script_content and syn and _syn_request then
-    log("Intentando con syn.request...")
+    log("Probando syn.request...")
     local ok, result = pcall(function()
         return _syn_request({
             Url = SCRIPT_URL,
@@ -266,9 +249,9 @@ if not script_content and syn and _syn_request then
     end
 end
 
--- Metodo 3: game.HttpGet (ULTIMO - trunca respuestas en Xeno)
+-- Metodo 3: game.HttpGet (ULTIMO - trunca en Xeno)
 if not script_content and _HttpGet then
-    log("Intentando con game.HttpGet (ultimo recurso)...")
+    log("Probando game.HttpGet...")
     local ok, result = pcall(function()
         return _HttpGet(game, SCRIPT_URL, true)
     end)
@@ -289,8 +272,6 @@ end
 -- ============================================
 -- PARCHE: KeylessUI = false -> true
 -- ============================================
-log("Aplicando parches...")
-
 if string.find(script_content, "Sakura%.Options%.KeylessUI%s*=%s*false", 1, true) then
     script_content = string.gsub(
         script_content,
@@ -299,7 +280,7 @@ if string.find(script_content, "Sakura%.Options%.KeylessUI%s*=%s*false", 1, true
     )
     log("PARCHE: KeylessUI=false -> true")
 else
-    log("KeylessUI=false no encontrado (ya era true o no existe)")
+    log("KeylessUI=false no encontrado")
 end
 
 -- ============================================
