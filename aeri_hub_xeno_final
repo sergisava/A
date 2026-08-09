@@ -1,7 +1,3 @@
--- AERI HUB - XENO FINAL
--- Cargar ESTE script primero en Xeno
-
--- LOGGING
 local AERI_LOG = {}
 _G.AERI_LOG = AERI_LOG
 
