@@ -33,10 +33,11 @@ end
 
 local function save_log()
     if writefile then
+        local log_path = "C:\\Users\\sergisava\\AppData\\Local\\Xeno\\AeriHub_Bypass_Log.txt"
         local content = table.concat(AERI_LOG, "\n")
         pcall(function()
-            writefile("AeriHub_Bypass_Log.txt", content)
-            log("Log guardado en AeriHub_Bypass_Log.txt")
+            writefile(log_path, content)
+            log("Log guardado en: " .. log_path)
         end)
     end
 end
@@ -50,6 +51,7 @@ local function print_log()
 end
 
 log("Iniciando AERI HUB Bypass Wrapper")
+log("Ruta de log: C:\\Users\\sergisava\\AppData\\Local\\Xeno\\AeriHub_Bypass_Log.txt")
 
 -- ============================================
 -- BYPASS 1: Luraph v14.7 internal packed-hash check
