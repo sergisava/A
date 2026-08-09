@@ -1,23 +1,11 @@
 --[[
-    AERI HUB - BYPASS WRAPPER
+    AERI HUB - BYPASS WRAPPER (DEFENSIVE MODE)
     Cargar ESTE archivo por loadstring/URL primero.
-    Parchea el script original en caliente:
-      - KeylessUI = false -> true
-      - Bypass HWID/keys
-      - Bypass verificación interna Luraph v14.7
+    Versión con validación paso a paso y logging detallado.
 ]]
 
--- Guardar referencias ORIGINALES antes de tocar nada
-local _pcall = pcall
-local _loadstring = loadstring
-local _tostring = tostring
-local _HttpGet = game.HttpGet
-local HttpService = game:GetService("HttpService")
-local _RequestAsync = HttpService.RequestAsync
-local _syn_request = syn and syn.request
-
 -- ============================================
--- SISTEMA DE LOGGING
+-- LOGGING SYSTEM
 -- ============================================
 
 local AERI_LOG = {}
@@ -50,47 +38,133 @@ local function print_log()
     log("========== FIN DEL LOG ==========")
 end
 
-log("Iniciando AERI HUB Bypass Wrapper")
-log("Ruta de log: C:\\Users\\sergisava\\AppData\\Local\\Xeno\\AeriHub_Bypass_Log.txt")
+log("========================================")
+log("AERI HUB BYPASS WRAPPER - INICIO")
+log("========================================")
+
+-- ============================================
+-- STEP 1: Validar entorno básico
+-- ============================================
+
+log("STEP 1: Validando entorno basico...")
+
+local environment_ok = true
+
+if not game then
+    log("ERROR: game no disponible")
+    environment_ok = false
+end
+
+if not game:GetService then
+    log("ERROR: game:GetService no disponible")
+    environment_ok = false
+end
+
+if not game.HttpGet then
+    log("ERROR: game.HttpGet no disponible")
+    environment_ok = false
+end
+
+if not pcall then
+    log("ERROR: pcall no disponible")
+    environment_ok = false
+end
+
+if not loadstring then
+    log("ERROR: loadstring no disponible")
+    environment_ok = false
+end
+
+if not tostring then
+    log("ERROR: tostring no disponible")
+    environment_ok = false
+end
+
+if not string then
+    log("ERROR: string library no disponible")
+    environment_ok = false
+end
+
+if environment_ok then
+    log("STEP 1: Entorno basico OK")
+else
+    log("STEP 1: Entorno basico FALLO - abortando")
+    print_log()
+    save_log()
+    return
+end
+
+-- ============================================
+-- STEP 2: Guardar referencias originales
+-- ============================================
+
+log("STEP 2: Guardando referencias originales...")
+
+local _pcall = pcall
+local _loadstring = loadstring
+local _tostring = tostring
+local _HttpGet = game.HttpGet
+local HttpService = pcall(function() return game:GetService("HttpService") end) and game:GetService("HttpService") or nil
+local _RequestAsync = HttpService and HttpService.RequestAsync or nil
+local _syn_request = syn and syn.request or nil
+
+log("STEP 2: Referencias guardadas")
+log("  - game.HttpGet: " .. tostring(_HttpGet ~= nil))
+log("  - HttpService: " .. tostring(HttpService ~= nil))
+log("  - RequestAsync: " .. tostring(_RequestAsync ~= nil))
+log("  - syn.request: " .. tostring(_syn_request ~= nil))
 
 -- ============================================
 -- BYPASS 1: Luraph v14.7 internal packed-hash check
 -- ============================================
 
+log("STEP 3: Aplicando bypass Luraph v14.7...")
+
 local function is_luraph_check(expr)
     expr = tostring(expr or "")
-    return expr:find("45700", 1, true)
+    local found = expr:find("45700", 1, true)
         or expr:find("0x1B,0x4C,0x75,0x61,0x50", 1, true)
         or expr:find("LuP", 1, true)
+    return found
 end
 
+-- Reemplazar loadstring de forma segura
+local original_loadstring = _loadstring
 loadstring = function(expr, env)
     if is_luraph_check(expr) then
-        log("BYPASS1: loadstring de verificación Luraph interceptado y neutralizado")
+        log("BYPASS1: loadstring Luraph interceptado")
         return function() end
     end
-    return _loadstring(expr, env)
+    return original_loadstring(expr, env)
 end
 
+-- Reemplazar pcall de forma segura
+local original_pcall = _pcall
 pcall = function(f, ...)
-    if f == _loadstring or f == loadstring or (type(f) == "string" and is_luraph_check(f)) then
-        log("BYPASS1: pcall de verificación Luraph interceptado y neutralizado")
+    if f == original_loadstring or f == loadstring or (type(f) == "string" and is_luraph_check(f)) then
+        log("BYPASS1: pcall Luraph interceptado")
         return true, function() end
     end
-    return _pcall(f, ...)
+    return original_pcall(f, ...)
 end
 
+-- Reemplazar tostring de forma segura
+local original_tostring = _tostring
 tostring = function(v)
-    if v == _pcall or v == pcall or v == _loadstring or v == loadstring then
-        log("BYPASS1: tostring de pcall/loadstring falsificado a 'LuP'")
+    if v == original_pcall or v == pcall or v == original_loadstring or v == loadstring then
+        log("BYPASS1: tostring pcall/loadstring falsificado")
         return "LuP"
     end
-    return _tostring(v)
+    return original_tostring(v)
 end
+
+log("STEP 3: Bypass Luraph aplicado")
 
 -- ============================================
 -- BYPASS 2: HTTP verification (keys / HWID)
 -- ============================================
+
+log("STEP 4: Aplicando bypass HTTP...")
 
 game.HttpGet = function(self, url, ...)
     url = tostring(url or "")
@@ -101,7 +175,7 @@ game.HttpGet = function(self, url, ...)
     }
     for _, p in ipairs(blocked) do
         if url:lower():find(p, 1, true) then
-            log("BYPASS2: game.HttpGet bloqueada URL de verificación: " .. url)
+            log("BYPASS2: game.HttpGet bloqueada: " .. url)
             return '{"status":"success","verified":true,"hwid":"BYPASSED","key":"BYPASSED"}'
         end
     end
@@ -117,7 +191,7 @@ if HttpService and _RequestAsync then
         }
         for _, p in ipairs(blocked) do
             if url:lower():find(p, 1, true) then
-                log("BYPASS2: RequestAsync bloqueada URL de verificación: " .. url)
+                log("BYPASS2: RequestAsync bloqueada: " .. url)
                 return {
                     Success = true,
                     StatusCode = 200,
@@ -139,7 +213,7 @@ if syn and _syn_request then
         }
         for _, p in ipairs(blocked) do
             if url:lower():find(p, 1, true) then
-                log("BYPASS2: syn.request bloqueada URL de verificación: " .. url)
+                log("BYPASS2: syn.request bloqueada: " .. url)
                 return {
                     Success = true,
                     StatusCode = 200,
@@ -152,12 +226,16 @@ if syn and _syn_request then
     end
 end
 
+log("STEP 4: Bypass HTTP aplicado")
+
 -- ============================================
 -- BYPASS 3: HWID / Roblox device services
 -- ============================================
 
+log("STEP 5: Aplicando bypass servicios Roblox...")
+
 local function safe_get_service(name)
-    local ok, service = _pcall(function() return game:GetService(name) end)
+    local ok, service = original_pcall(function() return game:GetService(name) end)
     return ok and service or nil
 end
 
@@ -169,7 +247,7 @@ if RbxAnalyticsService and RbxAnalyticsService.GetClientId then
     end
     log("BYPASS3: RbxAnalyticsService.GetClientId falsificado")
 else
-    log("BYPASS3: RbxAnalyticsService no disponible o no tiene GetClientId")
+    log("BYPASS3: RbxAnalyticsService no disponible o sin GetClientId")
 end
 
 local UserInputService = safe_get_service("UserInputService")
@@ -178,9 +256,9 @@ if UserInputService and UserInputService.GetPlatform then
     UserInputService.GetPlatform = function()
         return Enum.Platform.Windows
     end
-    log("BYPASS3: UserInputService.GetPlatform falsificado a Windows")
+    log("BYPASS3: UserInputService.GetPlatform falsificado")
 else
-    log("BYPASS3: UserInputService no disponible o no tiene GetPlatform")
+    log("BYPASS3: UserInputService no disponible o sin GetPlatform")
 end
 
 local GuiService = safe_get_service("GuiService")
@@ -189,14 +267,18 @@ if GuiService and GuiService.GetPlatform then
     GuiService.GetPlatform = function()
         return Enum.Platform.Windows
     end
-    log("BYPASS3: GuiService.GetPlatform falsificado a Windows")
+    log("BYPASS3: GuiService.GetPlatform falsificado")
 else
-    log("BYPASS3: GuiService no disponible o no tiene GetPlatform")
+    log("BYPASS3: GuiService no disponible o sin GetPlatform")
 end
+
+log("STEP 5: Bypass servicios Roblox aplicado")
 
 -- ============================================
 -- BYPASS 4: Fake environment values
 -- ============================================
+
+log("STEP 6: Inyectando variables de entorno falsas...")
 
 if getgenv then
     getgenv().KeyVerified = true
@@ -205,6 +287,9 @@ if getgenv then
     getgenv().HWID = "BYPASSED-HWID"
     getgenv().DeviceID = "BYPASSED-DEVICE"
     getgenv().SakuraVerified = true
+    log("BYPASS4: Variables inyectadas en getgenv")
+else
+    log("BYPASS4: getgenv no disponible")
 end
 
 if _G then
@@ -214,28 +299,36 @@ if _G then
     _G.HWID = "BYPASSED-HWID"
     _G.DeviceID = "BYPASSED-DEVICE"
     _G.SakuraVerified = true
+    log("BYPASS4: Variables inyectadas en _G")
+else
+    log("BYPASS4: _G no disponible")
 end
 
 if identifyexecutor then
     getgenv and getgenv().identifyexecutor = function() return "None", "1.0.0" end
+    log("BYPASS4: identifyexecutor ocultado")
+else
+    log("BYPASS4: identifyexecutor no disponible")
 end
 
-log("BYPASS4: Variables de entorno falsas inyectadas en _G/getgenv")
-log("BYPASS4: identifyexecutor ocultado")
-
-warn("[AERI BYPASS] Bypasses aplicados. Cargando script original...")
+log("STEP 6: Variables de entorno aplicadas")
 
 -- ============================================
 -- CARGA Y PARCHE DEL SCRIPT ORIGINAL
 -- ============================================
 
+log("STEP 7: Cargando script original...")
+
 local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/refs/heads/master/script.lua"
+log("URL: " .. SCRIPT_URL)
 
-log("Cargando script desde: " .. SCRIPT_URL)
+local script_content = nil
+local download_success, download_error = original_pcall(function()
+    script_content = game:HttpGet(SCRIPT_URL)
+end)
 
-local script_content = game:HttpGet(SCRIPT_URL)
-if not script_content or script_content == "" then
-    log("ERROR: No se pudo descargar el script. Verifica la URL o tu conexión.")
+if not download_success or not script_content or script_content == "" then
+    log("ERROR: Fallo al descargar script. Error: " .. tostring(download_error))
     print_log()
     save_log()
     return
@@ -254,23 +347,30 @@ script_content = string.gsub(
 if original_count > 0 then
     log("PARCHE: KeylessUI=false cambiado a true (" .. tostring(original_count) .. " reemplazo(s))")
 else
-    log("PARCHE: No se encontró KeylessUI=false en el script original")
+    log("PARCHE: No se encontro KeylessUI=false en el script original")
 end
 
-warn("[AERI BYPASS] Script cargado y parcheado.")
+-- ============================================
+-- EJECUCION FINAL
+-- ============================================
 
--- Ejecutar con loadstring usando la referencia original
-local success, result = _pcall(_loadstring, script_content)
-if success and result then
-    log("EJECUCION: Script cargado exitosamente")
-    local exec_success, exec_result = _pcall(result)
-    if exec_success then
-        log("EJECUCION: Script ejecutado sin errores")
-    else
-        log("EJECUCION: Error durante la ejecución del script: " .. tostring(exec_result))
-    end
+log("STEP 8: Compilando y ejecutando script...")
+
+local compile_success, compiled = original_pcall(original_loadstring, script_content)
+if not compile_success or not compiled then
+    log("ERROR: Fallo al compilar script: " .. tostring(compiled))
+    print_log()
+    save_log()
+    return
+end
+
+log("Script compilado exitosamente")
+
+local exec_success, exec_error = original_pcall(compiled)
+if exec_success then
+    log("EJECUCION: Script ejecutado sin errores")
 else
-    log("ERROR: No se pudo compilar el script: " .. tostring(result))
+    log("EJECUCION: Error durante ejecucion: " .. tostring(exec_error))
 end
 
 print_log()
