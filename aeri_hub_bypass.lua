@@ -174,7 +174,7 @@ warn("[AERI BYPASS] Bypasses aplicados. Cargando script original...")
 -- CARGA Y PARCHE DEL SCRIPT ORIGINAL
 -- ============================================
 
-local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/main/script_original.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/sergisava/A/refs/heads/master/script_original.lua"
 
 local script_content = game:HttpGet(SCRIPT_URL)
 
