@@ -41,13 +41,19 @@ local _RequestAsync = HttpService and HttpService.RequestAsync
 
 local function block(url)
     url = string.lower(_tostring(url or ""))
-    return string.find(url, "jnkie", 1, true) or string.find(url, "sakura", 1, true) or string.find(url, "key", 1, true) or string.find(url, "hwid", 1, true)
+    -- Allow downloading the SakuraUI framework code itself
+    if string.find(url, "sakuraui", 1, true) or (string.find(url, "sakura", 1, true) and string.find(url, ".lua", 1, true)) then
+        return false
+    end
+    return string.find(url, "jnkie", 1, true) or string.find(url, "key", 1, true) or string.find(url, "hwid", 1, true) or string.find(url, "verify", 1, true)
 end
+
+local response_json = '{"status":"success","verified":true,"valid":true,"key":"BYPASSED","success":true}'
 
 local _HttpGet = game.HttpGet
 if _HttpGet then
     game.HttpGet = function(self, url, ...)
-        if block(url) then return '{"status":"success"}' end
+        if block(url) then return response_json end
         return _HttpGet(self, url, ...)
     end
 end
@@ -55,10 +61,31 @@ end
 if _RequestAsync then
     HttpService.RequestAsync = function(self, options)
         local url = _tostring(options and options.Url or "")
-        if block(url) then return {Success = true, StatusCode = 200, Body = '{"status":"success"}', StatusMessage = "OK"} end
+        if block(url) then return {Success = true, StatusCode = 200, Body = response_json, StatusMessage = "OK"} end
         return _RequestAsync(self, options)
     end
 end
+
+local function hook_executor_request(old_fn)
+    if not old_fn then return nil end
+    return function(options)
+        local url = string.lower(_tostring(options and (options.Url or options.url) or ""))
+        if block(url) then
+            return {
+                Success = true,
+                StatusCode = 200,
+                StatusMessage = "OK",
+                Body = response_json
+            }
+        end
+        return old_fn(options)
+    end
+end
+
+if request then request = hook_executor_request(request) end
+if http_request then http_request = hook_executor_request(http_request) end
+if syn and syn.request then syn.request = hook_executor_request(syn.request) end
+if fluxus and fluxus.request then fluxus.request = hook_executor_request(fluxus.request) end
 
 local RbxAnalyticsService = pcall(function() return game:GetService("RbxAnalyticsService") end) and game:GetService("RbxAnalyticsService") or nil
 if RbxAnalyticsService and RbxAnalyticsService.GetClientId then
